@@ -1,0 +1,462 @@
+//@ pragma UseQApplication
+//@ pragma ShellId inir
+// DISABLED: webapps — requires quickshell-webengine rebuild, re-enable when ready
+//-@ pragma EnableQtWebEngineQuick
+//@ pragma Env QS_NO_RELOAD_POPUP=1
+//@ pragma DefaultEnv QT_LOGGING_RULES=quickshell.dbus.properties=false
+//@ pragma Env QT_QUICK_CONTROLS_STYLE=Basic
+//@ pragma Env QT_QUICK_FLICKABLE_WHEEL_DECELERATION=10000
+//@ pragma Env QSG_RENDER_LOOP=threaded
+//@ pragma DefaultEnv QS_DROP_EXPENSIVE_FONTS=1
+// Launcher keeps QT_SCALE_FACTOR=1; shell scaling lives in appearance.typography.sizeScale
+// DISABLED: webapps — requires quickshell-webengine rebuild
+//-@ pragma Env QTWEBENGINE_CHROMIUM_FLAGS=--disable-features=ThirdPartyCookieBlocking,StorageAccessAPI
+
+import qs.modules.common
+import qs.modules.altSwitcher
+import qs.modules.closeConfirm
+import qs.modules.settings
+
+import QtQuick
+import Quickshell
+import Quickshell.Io
+import qs.services
+
+ShellRoot {
+    id: root
+
+    readonly property bool disableHotReload: Quickshell.env("INIR_DISABLE_HOT_RELOAD") === "1"
+        || Quickshell.env("INIR_DISABLE_HOT_RELOAD") === "true"
+
+    function _log(msg: string): void {
+        if (Quickshell.env("QS_DEBUG") === "1") console.log(msg);
+    }
+
+    // Force singleton instantiation — startup-critical only
+    property var _idleService: Idle
+    property var _powerProfilePersistence: PowerProfilePersistence
+
+    // Deferred singletons — initialized after first frame to reduce boot contention
+    // Tier 3: T+500ms (display/interaction services)
+    property var _gameModeService
+    property var _windowPreviewService
+    property var _weatherService
+    property var _voiceSearchService
+    property var _fontSyncService
+    property var _cavaThemeService
+    // Tier 4: T+1500ms (background features - updates, sync, content services)
+    property var _shellUpdatesService
+    property var _autostartService
+    property var _calendarSyncService
+    property var _todoService
+    property var _notepadService
+
+    // Boot phase timing (ms since epoch). Written to ~/.cache/inir/last-boot.json
+    // when the deferred phase finishes. `inir status` reads this back to show users
+    // exactly where their startup time goes — systemd → qs launch → QML completed →
+    // Config ready → shell entry → deferred services. Useful for triaging "15-20s startup"
+    // reports without asking the user to run journalctl.
+    property real _bootCompletedAt: 0
+    property real _bootConfigReadyAt: 0
+    property real _bootShellEntryAt: 0
+    property real _bootDeferredAt: 0
+    readonly property string _bootCachePath: (Quickshell.env("XDG_CACHE_HOME") || (Quickshell.env("HOME") + "/.cache")) + "/inir/last-boot.json"
+
+    Component.onCompleted: {
+        root._bootCompletedAt = Date.now();
+        console.info("[Boot] T+0ms: Component.onCompleted (shell.qml ready)");
+        Quickshell.watchFiles = !disableHotReload;
+        
+        // Tier 0: startup-critical singletons (no delay)
+        root._log("[Boot] Tier 0: startup-critical singletons");
+        FirstRunExperience.load();
+        ConflictKiller.load();
+        // Force MemoryPressureService instantiation for IPC (#164)
+        void MemoryPressureService.enabled;
+        
+        // Reset shell entry state (hot-reload may preserve singletons)
+        GlobalStates.shellEntryReady = false;
+        GlobalStates.deferredPanelsReady = false;
+        
+        if (Config.ready) {
+            root._bootConfigReadyAt = Date.now();
+            console.info("[Boot] T+" + (root._bootConfigReadyAt - root._bootCompletedAt) + "ms: Config.ready (immediate)");
+            // Config was already ready before this root was (re)built (hot-reload / preserved
+            // singletons). onReadyChanged won't fire, so apply theme + icons here too,
+            // otherwise the shell comes up with stale/unthemed colors and icons.
+            Qt.callLater(() => ThemeService.applyCurrentTheme());
+            Qt.callLater(() => IconThemeService.ensureInitialized());
+            shellEntryTimer.start();
+            deferredInitTimer.start();
+        }
+    }
+
+    // Shell entry animation: panels start hidden, slide in after a brief delay
+    // 200ms is enough for LazyLoader panels to be created on warm cache;
+    // on cold boot the progressive slide-in is better UX than extra blank time
+    // Tier 1-2: Implicit — UI-critical services load with panels (Audio, Battery, etc.)
+    Timer {
+        id: shellEntryTimer
+        interval: Appearance.animationsEnabled ? 200 : 0
+        repeat: false
+        onTriggered: {
+            if (!root._bootShellEntryAt) root._bootShellEntryAt = Date.now();
+            console.info("[Boot] T+" + (root._bootShellEntryAt - root._bootCompletedAt) + "ms: shellEntryReady (first frame)");
+            GlobalStates.shellEntryReady = true;
+        }
+    }
+
+    // Deferred initialization: load non-critical services and panels after the first frame
+    // is rendered, spreading startup work over time to reduce the boot contention burst
+    // Tier 3: T+500ms — display/interaction services needed soon after first frame
+    Timer {
+        id: deferredInitTimer
+        interval: 500
+        repeat: false
+        onTriggered: {
+            root._log("[Boot] T+" + (Date.now() - root._bootCompletedAt) + "ms: Tier 3 (display/interaction)");
+            root._gameModeService = GameMode;
+            root._windowPreviewService = WindowPreviewService;
+            root._weatherService = Weather;
+            root._voiceSearchService = VoiceSearch;
+            root._fontSyncService = FontSyncService;
+            root._cavaThemeService = CavaTheme;
+            Hyprsunset.load();
+            GlobalStates.deferredPanelsReady = true;
+            // Boot greeting: show once per session (singleton preserves bootGreetingDone across hot-reload)
+            if (!GlobalStates.bootGreetingDone && (Config.options?.bootGreeting?.enable ?? true)) {
+                GlobalStates.bootGreetingOpen = true;
+            }
+            if (!root._bootDeferredAt) {
+                root._bootDeferredAt = Date.now();
+            }
+            // Kick off Tier 4 loading
+            lateFeaturesTimer.start();
+        }
+    }
+
+    // Tier 4: T+1500ms — background features that can wait (updates, sync, content)
+    // These services do background work (network requests, file I/O) that doesn't affect UX
+    property real _bootLateFeaturesAt: 0
+    Timer {
+        id: lateFeaturesTimer
+        interval: 1000  // +1000ms after Tier 3 = T+1500ms total
+        repeat: false
+        onTriggered: {
+            root._log("[Boot] T+" + (Date.now() - root._bootCompletedAt) + "ms: Tier 4 (background features)");
+            root._shellUpdatesService = ShellUpdates;
+            root._autostartService = Autostart;
+            root._calendarSyncService = CalendarSync;
+            root._todoService = Todo;
+            root._notepadService = Notepad;
+            root._bootLateFeaturesAt = Date.now();
+            root._writeBootPhase();
+        }
+    }
+
+    // Persist boot phase timestamps so `inir status` can report startup breakdown
+    // without asking the user to run journalctl. Only written once per boot — hot-reloads
+    // overwrite (which is intentional, latest run is what matters for diagnostics).
+    function _writeBootPhase(): void {
+        if (!root._bootCompletedAt) return;
+        const data = {
+            componentCompletedAt: Math.floor(root._bootCompletedAt),
+            configReadyAt: Math.floor(root._bootConfigReadyAt),
+            shellEntryAt: Math.floor(root._bootShellEntryAt),
+            deferredReadyAt: Math.floor(root._bootDeferredAt),
+            lateFeaturesAt: Math.floor(root._bootLateFeaturesAt),
+            // Deltas for easier analysis
+            deltas: {
+                configReady: Math.floor(root._bootConfigReadyAt - root._bootCompletedAt),
+                shellEntry: Math.floor(root._bootShellEntryAt - root._bootConfigReadyAt),
+                deferred: Math.floor(root._bootDeferredAt - root._bootShellEntryAt),
+                lateFeatures: Math.floor(root._bootLateFeaturesAt - root._bootDeferredAt)
+            },
+            shellPid: 0,
+            writtenAt: Math.floor(Date.now())
+        };
+        bootPhaseWriter.setText(JSON.stringify(data, null, 2));
+    }
+
+    FileView {
+        id: bootPhaseWriter
+        path: root._bootCachePath
+        printErrors: false
+    }
+
+    Connections {
+        target: Config
+        function onReadyChanged() {
+            if (Config.ready) {
+                if (!root._bootConfigReadyAt) {
+                    root._bootConfigReadyAt = Date.now();
+                    console.info("[Boot] T+" + (root._bootConfigReadyAt - root._bootCompletedAt) + "ms: Config.ready (async)");
+                }
+                root._log("[Boot] Applying theme and icon theme");
+                Qt.callLater(() => ThemeService.applyCurrentTheme());
+                Qt.callLater(() => IconThemeService.ensureInitialized());
+                // Kick off shell entry animation after panels have been created
+                shellEntryTimer.start();
+                // Schedule deferred init (non-critical services + panels) after first frame
+                deferredInitTimer.start();
+                // Only reset enabledPanels if it's empty or undefined (first run / corrupted config)
+                if (!Config.options?.enabledPanels || Config.options.enabledPanels.length === 0) {
+                    const family = Config.options?.panelFamily ?? "ii"
+                    if (root.families.includes(family)) {
+                        Config.setNestedValue("enabledPanels", root.panelFamilies[family])
+                    }
+                }
+                // Migration: Ensure waffle family has wBackdrop instead of iiBackdrop
+                root.migrateEnabledPanels();
+            }
+        }
+    }
+
+    // Migrate enabledPanels for users upgrading from older versions
+    property bool _migrationDone: false
+    function migrateEnabledPanels() {
+        if (_migrationDone) return;
+        _migrationDone = true;
+
+        const family = Config.options?.panelFamily ?? "ii";
+        let panels = [...(Config.options?.enabledPanels ?? [])];
+        let changed = false;
+
+        // Only add genuinely NEW panels (from updates), not panels the user deliberately disabled.
+        // knownPanels tracks what the user has seen. If a panel is in knownPanels but not in
+        // enabledPanels, the user removed it — don't re-add.
+        const basePanels = root.panelFamilies[family] ?? [];
+        let known = [...(Config.options?.knownPanels ?? [])];
+        const isFirstRun = known.length === 0;
+
+        if (isFirstRun) {
+            // First boot with this logic — seed knownPanels with ALL families' panels.
+            // This prevents re-adding panels that existing users already disabled,
+            // including across family switches.
+            const allPanels = [];
+            for (const fam of root.families) {
+                for (const p of (root.panelFamilies[fam] ?? [])) {
+                    if (!allPanels.includes(p)) allPanels.push(p);
+                }
+            }
+            Config.setNestedValue("knownPanels", allPanels);
+        } else {
+            // Subsequent boots: only add panels that are new (not in knownPanels)
+            let knownChanged = false;
+            for (const panel of basePanels) {
+                if (!known.includes(panel)) {
+                    // Genuinely new panel from an update
+                    if (!panels.includes(panel)) {
+                        root._log("[Shell] Adding new panel to enabledPanels: " + panel);
+                        panels.push(panel);
+                        changed = true;
+                    }
+                    known.push(panel);
+                    knownChanged = true;
+                }
+            }
+            if (knownChanged) {
+                Config.setNestedValue("knownPanels", known);
+            }
+        }
+
+        if (family === "waffle") {
+            // If waffle family has iiBackdrop but not wBackdrop, migrate
+            const hasIiBackdrop = panels.includes("iiBackdrop");
+            const hasWBackdrop = panels.includes("wBackdrop");
+
+            if (hasIiBackdrop && !hasWBackdrop) {
+                root._log("[Shell] Migrating enabledPanels: replacing iiBackdrop with wBackdrop for waffle family");
+                panels = panels.filter(p => p !== "iiBackdrop");
+                panels.push("wBackdrop");
+                changed = true;
+            }
+        }
+
+        const legacyPinnedApps = ["org.gnome.Nautilus", "firefox", "foot"];
+        const currentPinnedApps = Config.options?.dock?.pinnedApps ?? [];
+        if (currentPinnedApps.length === legacyPinnedApps.length
+                && currentPinnedApps.every((panel, idx) => panel === legacyPinnedApps[idx])) {
+            root._log("[Shell] Migrating dock.pinnedApps default terminal from foot to kitty");
+            Config.setNestedValue("dock.pinnedApps", ["org.gnome.Nautilus", "firefox", "kitty"])
+        }
+
+        if (changed)
+            Config.setNestedValue("enabledPanels", panels)
+    }
+
+    // IPC for settings - overlay mode or separate window based on config
+    // Note: waffle family ALWAYS uses its own window (waffleSettings.qml), never the Material overlay
+    IpcHandler {
+        target: "settings"
+        function open(): void {
+            const isWaffle = Config.options?.panelFamily === "waffle"
+                && Config.options?.waffles?.settings?.useMaterialStyle !== true
+
+            if (isWaffle) {
+                // Waffle always opens its own Win11-style settings window
+                Quickshell.execDetached([Quickshell.shellPath("scripts/inir"),
+                    "waffle-settings-window"])
+            } else if (Config.options?.settingsUi?.overlayMode ?? false) {
+                // ii overlay mode — toggle inline panel
+                GlobalStates.settingsOverlayOpen = !GlobalStates.settingsOverlayOpen
+            } else {
+                // ii window mode (default) — launch separate process
+                Quickshell.execDetached([Quickshell.shellPath("scripts/inir"),
+                    "settings-window"])
+            }
+        }
+        function toggle(): void {
+            open()
+        }
+    }
+
+    // Settings overlay panel (loaded only when overlay mode is enabled)
+    LazyLoader {
+        active: Config.ready && (Config.options?.settingsUi?.overlayMode ?? false)
+        component: SettingsOverlay {}
+    }
+
+    // === Panel Loaders ===
+    // AltSwitcher IPC router (material/waffle)
+    LazyLoader { active: Config.ready; component: AltSwitcher {} }
+
+    // Load ONLY the active family panels to reduce startup time.
+    // Using `source:` instead of `component:` to avoid parsing inactive family at compile time.
+    // This saves ~135 file parses when using ii family (waffle not parsed) and vice versa.
+    LazyLoader {
+        active: Config.ready && (Config.options?.panelFamily ?? "ii") !== "waffle"
+        source: "ShellIiPanels.qml"
+    }
+
+    LazyLoader {
+        active: Config.ready && (Config.options?.panelFamily ?? "ii") === "waffle"
+        source: "ShellWafflePanels.qml"
+    }
+
+    // Close confirmation dialog (always loaded, handles IPC)
+    LazyLoader { active: Config.ready; component: CloseConfirm {} }
+
+    // Shared (always loaded via ToastManager)
+    ToastManager {}
+
+    // === Panel Families ===
+    // Note: iiAltSwitcher is always loaded (not in families) as it acts as IPC router
+    // for the unified "altSwitcher" target, redirecting to wAltSwitcher when waffle is active
+    property list<string> families: ["ii", "waffle"]
+    property var panelFamilies: ({
+        "ii": [
+            "iiBar", "iiBackground", "iiBackdrop", "iiBootGreeting", "iiCheatsheet", "iiControlPanel", "iiDock", "iiLock",
+            "iiMediaControls", "iiNotificationPopup", "iiOnScreenDisplay", "iiOnScreenKeyboard",
+            "iiOverlay", "iiOverview", "iiPolkit", "iiRegionSelector", "iiScreenCorners",
+            "iiSessionScreen", "iiSidebarLeft", "iiSidebarRight", "iiTilingOverlay", "iiVerticalBar",
+            "iiWallpaperSelector", "iiCoverflowSelector", "iiClipboard", "iiShellUpdate", "iiRecordingOsd"
+        ],
+        "waffle": [
+            "wBar", "wBackground", "wBackdrop", "wStartMenu", "wActionCenter", "wNotificationCenter", "wNotificationPopup", "wOnScreenDisplay", "wWidgets", "wTaskView", "wLock", "wPolkit", "wSessionScreen",
+            // Shared modules that work with waffle
+            // Note: wAltSwitcher is always loaded when waffle is active (not in this list)
+            "iiBootGreeting", "iiCheatsheet", "iiOnScreenKeyboard", "iiOverlay", "iiOverview",
+            "iiRegionSelector", "iiScreenCorners", "iiWallpaperSelector", "iiCoverflowSelector", "iiClipboard"
+        ]
+    })
+
+    // === Panel Family Transition ===
+    property string _pendingFamily: ""
+    property bool _transitionInProgress: false
+
+    function _ensureFamilyPanels(family: string): void {
+        const basePanels = root.panelFamilies[family] ?? []
+        const currentPanels = Config.options?.enabledPanels ?? []
+
+        if (basePanels.length === 0) return
+        if (currentPanels.length === 0) {
+            Config.setNestedValue("enabledPanels", [...basePanels])
+            return
+        }
+
+        const merged = [...currentPanels]
+        for (const panel of basePanels) {
+            if (!merged.includes(panel)) merged.push(panel)
+        }
+        Config.setNestedValue("enabledPanels", merged)
+
+        // Update knownPanels so the new family's panels are tracked before the user can disable them
+        const known = [...(Config.options?.knownPanels ?? [])]
+        let knownChanged = false
+        for (const panel of basePanels) {
+            if (!known.includes(panel)) {
+                known.push(panel)
+                knownChanged = true
+            }
+        }
+        if (knownChanged) Config.setNestedValue("knownPanels", known)
+    }
+
+    function cyclePanelFamily() {
+        const currentFamily = Config.options?.panelFamily ?? "ii"
+        const currentIndex = families.indexOf(currentFamily)
+        const nextIndex = (currentIndex + 1) % families.length
+        const nextFamily = families[nextIndex]
+
+        // Determine direction: ii -> waffle = left, waffle -> ii = right
+        const direction = nextIndex > currentIndex ? "left" : "right"
+        root.startFamilyTransition(nextFamily, direction)
+    }
+
+    function setPanelFamily(family: string) {
+        const currentFamily = Config.options?.panelFamily ?? "ii"
+        if (families.includes(family) && family !== currentFamily) {
+            const currentIndex = families.indexOf(currentFamily)
+            const nextIndex = families.indexOf(family)
+            const direction = nextIndex > currentIndex ? "left" : "right"
+            root.startFamilyTransition(family, direction)
+        }
+    }
+
+    function startFamilyTransition(targetFamily: string, direction: string) {
+        if (_transitionInProgress) return
+
+        // If animation is disabled, switch instantly
+        if (!(Config.options?.familyTransitionAnimation ?? true)) {
+            Config.setNestedValue("panelFamily", targetFamily)
+            root._ensureFamilyPanels(targetFamily)
+            return
+        }
+
+        _transitionInProgress = true
+        _pendingFamily = targetFamily
+        GlobalStates.familyTransitionDirection = direction
+        GlobalStates.familyTransitionActive = true
+    }
+
+    function applyPendingFamily() {
+        if (_pendingFamily && families.includes(_pendingFamily)) {
+            Config.setNestedValue("panelFamily", _pendingFamily)
+            root._ensureFamilyPanels(_pendingFamily)
+        }
+        _pendingFamily = ""
+    }
+
+    function finishFamilyTransition() {
+        _transitionInProgress = false
+        GlobalStates.familyTransitionActive = false
+    }
+
+    // Family transition overlay - lazy loaded to avoid parsing waffle on startup
+    Loader {
+        active: Config.ready
+        source: "FamilyTransitionOverlay.qml"
+        onLoaded: {
+            item.exitComplete.connect(root.applyPendingFamily)
+            item.enterComplete.connect(root.finishFamilyTransition)
+        }
+    }
+
+    IpcHandler {
+        target: "panelFamily"
+        function cycle(): void { root.cyclePanelFamily() }
+        function set(family: string): void { root.setPanelFamily(family) }
+    }
+}
+

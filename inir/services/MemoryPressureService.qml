@@ -1,0 +1,148 @@
+pragma Singleton
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import Quickshell
+import Quickshell.Io
+import qs.modules.common
+import qs.services
+
+// Memory pressure monitoring for JSGCHeap accumulation (#164).
+// Qt's V4 JS engine creates memfd mappings that persist as "(deleted)" after
+// Loader teardown. This service monitors that accumulation and notifies the
+// user when a restart would help reclaim memory.
+Singleton {
+    id: root
+
+    // ── Config ────────────────────────────────────────────────────────────
+    readonly property bool enabled: Config.options?.performance?.memoryMonitoring ?? true
+    readonly property int deletedMappingsThreshold: Config.options?.performance?.jsgcThreshold ?? 300
+    readonly property int checkIntervalMs: 300000  // check every 5 min
+
+    // ── State ─────────────────────────────────────────────────────────────
+    property int currentDeletedMappings: 0
+    property int currentTotalMappings: 0
+    property bool notificationShown: false
+    property bool userDismissed: false
+
+    // ── Public API ────────────────────────────────────────────────────────
+    function forceGc(): void {
+        gc()
+        _log("gc() forced")
+    }
+
+    function restart(): void {
+        _log("user requested restart")
+        Notifications.send(
+            "iNiR",
+            Translation.tr("Restarting shell..."),
+            "system-reboot-symbolic",
+            2000, false, {}
+        )
+        // Small delay so notification shows
+        Qt.callLater(() => {
+            Quickshell.execDetached(["systemctl", "--user", "restart", "inir.service"])
+        })
+    }
+
+    function dismiss(): void {
+        root.userDismissed = true
+        root.notificationShown = false
+        _log("user dismissed memory warning")
+    }
+
+    function reset(): void {
+        root.userDismissed = false
+        root.notificationShown = false
+        _log("reset state")
+    }
+
+    function getStats(): string {
+        return JSON.stringify({
+            deletedMappings: root.currentDeletedMappings,
+            totalMappings: root.currentTotalMappings,
+            threshold: root.deletedMappingsThreshold,
+            notificationShown: root.notificationShown,
+            userDismissed: root.userDismissed,
+            enabled: root.enabled
+        })
+    }
+
+    // ── Internal ──────────────────────────────────────────────────────────
+    function _log(...args): void {
+        if (Quickshell.env("QS_DEBUG") === "1")
+            console.log("[MemoryPressure]", ...args)
+    }
+
+    function _checkMemoryPressure(): void {
+        if (!root.enabled) return
+        _mapsReader.running = true
+    }
+
+    function _notifyUser(): void {
+        if (root.notificationShown || root.userDismissed) return
+        
+        root.notificationShown = true
+        const mbEstimate = Math.round(root.currentDeletedMappings * 0.5)  // ~0.5 MB per mapping
+        
+        Notifications.send(
+            "iNiR",
+            Translation.tr("Memory usage is high (~%1 MB accumulated). A restart would free it. Run: inir memory restart").arg(mbEstimate),
+            "dialog-warning-symbolic",
+            0, false, {}  // persistent until dismissed
+        )
+        _log("notified user, estimated leak:", mbEstimate, "MB")
+    }
+
+    // ── Timers ────────────────────────────────────────────────────────────
+    Timer {
+        id: _checkTimer
+        interval: root.checkIntervalMs
+        repeat: true
+        running: root.enabled
+        onTriggered: root._checkMemoryPressure()
+    }
+
+    // ── Maps reader ───────────────────────────────────────────────────────
+    Process {
+        id: _mapsReader
+        command: ["sh", "-c", "grep -c 'JSGCHeap.*deleted' /proc/self/maps 2>/dev/null || echo 0; grep -c JSGCHeap /proc/self/maps 2>/dev/null || echo 0"]
+        stdout: SplitParser {
+            property int lineNum: 0
+            onRead: line => {
+                const val = parseInt(line.trim()) || 0
+                if (lineNum === 0) {
+                    root.currentDeletedMappings = val
+                } else {
+                    root.currentTotalMappings = val
+                }
+                lineNum++
+            }
+        }
+        onExited: (code, status) => {
+            _mapsReader.stdout.lineNum = 0
+            
+            if (root.currentDeletedMappings >= root.deletedMappingsThreshold) {
+                _log("threshold exceeded:", root.currentDeletedMappings, ">=", root.deletedMappingsThreshold)
+                root._notifyUser()
+            }
+        }
+    }
+
+    // ── IPC ───────────────────────────────────────────────────────────────
+    IpcHandler {
+        target: "memory"
+        function collect(): string { root.forceGc(); return "gc() called" }
+        function stats(): string { return root.getStats() }
+        function restart(): string { root.restart(); return "restarting..." }
+        function dismiss(): string { root.dismiss(); return "dismissed" }
+        function reset(): string { root.reset(); return "reset" }
+    }
+
+    Component.onCompleted: {
+        if (!root.enabled) return
+        Qt.callLater(() => {
+            _checkTimer.start()
+        })
+    }
+}
