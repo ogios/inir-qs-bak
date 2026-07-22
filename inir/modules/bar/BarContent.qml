@@ -190,7 +190,7 @@ Item { // Bar content region
         return (root._layoutMigrated && a && a.length >= 0) ? a : fallback
     }
     readonly property var _leftIds:        root._zone("left",        ["leftSidebarButton", "activeWindow"])
-    readonly property var _centerLeftIds:  root._zone("centerLeft",  ["resources", "media"])
+    readonly property var _centerLeftIds:  root._zone("centerLeft",  ["resources", "codexUsage", "media"])
     readonly property var _centerIds:      root._zone("center",      ["workspaces"])
     readonly property var _centerRightIds: root._zone("centerRight", ["clock", "utilButtons", "battery"])
     readonly property var _rightIds:       root._zone("right",       ["rightSidebarButton", "tray", "timer", "shellUpdate", "spacer", "weather"])
@@ -205,6 +205,7 @@ Item { // Bar content region
         "leftSidebarButton": leftSidebarButtonComponent,
         "activeWindow": activeWindowComponent,
         "resources": resourcesModuleComponent,
+        "codexUsage": codexUsageModuleComponent,
         "media": mediaModuleComponent,
         "workspaces": workspacesModuleComponent,
         "clock": clockModuleComponent,
@@ -253,6 +254,15 @@ Item { // Bar content region
             Layout.alignment: Qt.AlignVCenter
             Layout.fillWidth: root.useShortenedForm === 2
             alwaysShowAllResources: root.useShortenedForm === 2
+        }
+    }
+    Component {
+        id: codexUsageModuleComponent
+        CodexUsageIndicator {
+            visible: root._moduleVisible("codexUsage")
+            Layout.alignment: Qt.AlignVCenter
+            useShortenedForm: root.useShortenedForm
+            alwaysShow: root.useShortenedForm === 2
         }
     }
     Component {

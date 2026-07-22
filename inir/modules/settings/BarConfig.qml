@@ -680,6 +680,95 @@ ContentPage {
     }
 
     // ═══════════════════════════════════════════════════════════════════
+    // CODEX USAGE
+    // ═══════════════════════════════════════════════════════════════════
+    SettingsCardSection {
+        visible: root.isIiActive && !(Config.options?.settingsUi?.easyMode ?? false)
+        expanded: false
+        icon: "auto_awesome"
+        title: Translation.tr("Codex Usage")
+
+        SettingsGroup {
+            StyledText {
+                Layout.fillWidth: true
+                text: Translation.tr("Show Codex rate-limit occupancy on the bar (same style as RAM/CPU). Requires ~/.codex/auth.json from a ChatGPT login.")
+                color: Appearance.colors.colSubtext
+                font.pixelSize: Appearance.font.pixelSize.smaller
+            }
+
+            ConfigRow {
+                uniform: true
+                SettingsSwitch {
+                    buttonIcon: "visibility"
+                    text: Translation.tr("Enable Codex usage")
+                    checked: Config.options?.bar?.codexUsage?.enable ?? true
+                    onCheckedChanged: Config.setNestedValue("bar.codexUsage.enable", checked)
+                }
+                SettingsSwitch {
+                    buttonIcon: "person"
+                    text: Translation.tr("Show account in popup")
+                    checked: Config.options?.bar?.codexUsage?.showAccount ?? false
+                    onCheckedChanged: Config.setNestedValue("bar.codexUsage.showAccount", checked)
+                }
+            }
+
+            ConfigRow {
+                uniform: true
+                SettingsSwitch {
+                    buttonIcon: "bolt"
+                    text: Translation.tr("Show 5-hour window")
+                    checked: Config.options?.bar?.codexUsage?.showFiveHour ?? true
+                    onCheckedChanged: Config.setNestedValue("bar.codexUsage.showFiveHour", checked)
+                }
+                SettingsSwitch {
+                    buttonIcon: "calendar_month"
+                    text: Translation.tr("Show weekly window")
+                    checked: Config.options?.bar?.codexUsage?.showWeekly ?? true
+                    onCheckedChanged: Config.setNestedValue("bar.codexUsage.showWeekly", checked)
+                }
+            }
+
+            SettingsDivider {}
+
+            ConfigRow {
+                uniform: true
+                ConfigSpinBox {
+                    icon: "warning"
+                    text: Translation.tr("Caution used (%)")
+                    value: Config.options?.bar?.codexUsage?.cautionThreshold ?? 75
+                    from: 1
+                    to: 100
+                    stepSize: 1
+                    onValueChanged: Config.setNestedValue("bar.codexUsage.cautionThreshold", value)
+                }
+                ConfigSpinBox {
+                    icon: "error"
+                    text: Translation.tr("Warning used (%)")
+                    value: Config.options?.bar?.codexUsage?.warningThreshold ?? 90
+                    from: 1
+                    to: 100
+                    stepSize: 1
+                    onValueChanged: Config.setNestedValue("bar.codexUsage.warningThreshold", value)
+                }
+            }
+
+            ConfigRow {
+                uniform: true
+                ConfigSpinBox {
+                    icon: "schedule"
+                    text: Translation.tr("Refresh delay (s)")
+                    value: Config.options?.bar?.codexUsage?.requestDelaySeconds ?? 60
+                    from: 5
+                    to: 3600
+                    stepSize: 5
+                    onValueChanged: Config.setNestedValue("bar.codexUsage.requestDelaySeconds", value)
+                }
+                Item { Layout.fillWidth: true }
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
     // RESOURCES
     // ═══════════════════════════════════════════════════════════════════
     SettingsCardSection {

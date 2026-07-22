@@ -648,6 +648,7 @@
             "leftSidebarButton": true,
             "media": true,
             "resources": true,
+            "codexUsage": true,
             "rightSidebarButton": true,
             "sysTray": true,
             "taskbar": false,
@@ -663,6 +664,7 @@
             ],
             "centerLeft": [
                 "resources",
+                "codexUsage",
                 "media"
             ],
             "center": [
@@ -701,6 +703,17 @@
             "gpuWarningThreshold": 90,
             "memoryWarningThreshold": 95,
             "swapWarningThreshold": 85
+        },
+        "codexUsage": {
+            "enable": true,
+            "showFiveHour": true,
+            "showWeekly": true,
+            "showAccount": false,
+            "authFile": "",
+            "endpoint": "https://chatgpt.com/backend-api/wham/usage",
+            "requestDelaySeconds": 60,
+            "cautionThreshold": 75,
+            "warningThreshold": 90
         },
         "screenList": [],
         "showBackground": true,

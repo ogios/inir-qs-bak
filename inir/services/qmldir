@@ -15,6 +15,7 @@ singleton CalendarSync 1.0 CalendarSync.qml
 singleton CavaTheme 1.0 CavaTheme.qml
 singleton CompositorService 1.0 CompositorService.qml
 singleton ConflictKiller 1.0 ConflictKiller.qml
+singleton CodexUsage 1.0 CodexUsage.qml
 singleton CustomWidgets 1.0 CustomWidgets.qml
 DankSocket 1.0 DankSocket.qml
 singleton DateTime 1.0 DateTime.qml

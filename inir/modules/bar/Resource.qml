@@ -6,6 +6,9 @@ import QtQuick.Layouts
 Item {
     id: root
     required property string iconName
+    // Optional theme SVG under assets/icons (e.g. "openai-symbolic"). When set,
+    // this overrides MaterialSymbol `iconName` inside the ring.
+    property string customIcon: ""
     required property double percentage
     property real warningThreshold: 100
     property real cautionThreshold: 0  // 0 = disabled
@@ -16,6 +19,7 @@ Item {
     implicitHeight: Appearance.sizes.barHeight
     property bool warning: percentage * 100 >= warningThreshold
     property bool caution: cautionThreshold > 0 && percentage * 100 >= cautionThreshold && !warning
+    readonly property color iconColor: Appearance.inirEverywhere ? Appearance.inir.colText : Appearance.m3colors.m3onSecondaryContainer
 
     RowLayout {
         id: resourceRowLayout
@@ -41,14 +45,27 @@ Item {
                 anchors.centerIn: parent
                 width: resourceCircProg.implicitSize
                 height: resourceCircProg.implicitSize
+
+                CustomIcon {
+                    // Theme SVGs (e.g. openai-symbolic) fill more of their viewBox
+                    // than Material glyphs, so keep them smaller inside the ring.
+                    anchors.centerIn: parent
+                    visible: root.customIcon.length > 0
+                    width: Math.round(Appearance.font.pixelSize.normal * 0.9)
+                    height: Math.round(Appearance.font.pixelSize.normal * 0.9)
+                    source: root.customIcon
+                    colorize: true
+                    color: root.iconColor
+                }
                 
                 MaterialSymbol {
                     anchors.centerIn: parent
+                    visible: root.customIcon.length === 0
                     font.weight: Font.DemiBold
                     fill: 1
                     text: iconName
                     iconSize: Appearance.font.pixelSize.normal
-                    color: Appearance.inirEverywhere ? Appearance.inir.colText : Appearance.m3colors.m3onSecondaryContainer
+                    color: root.iconColor
                 }
             }
         }

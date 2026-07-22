@@ -1171,6 +1171,7 @@ Singleton {
                     property bool leftSidebarButton: true
                     property bool activeWindow: true
                     property bool resources: true
+                    property bool codexUsage: true
                     property bool media: true
                     property bool workspaces: true
                     property bool clock: true
@@ -1207,11 +1208,11 @@ Singleton {
                 //   centerRight → right central pill group (scroll, triple-tap fx)
                 //   right       → right edge section (click=right sidebar)
                 // Known ids: leftSidebarButton, activeWindow, taskbar, resources,
-                //   media, workspaces, clock, utilButtons, battery, weather, tray,
+                //   codexUsage, media, workspaces, clock, utilButtons, battery, weather, tray,
                 //   rightSidebarButton.
                 property JsonObject layout: JsonObject {
                     property list<string> left: ["leftSidebarButton", "activeWindow"]
-                    property list<string> centerLeft: ["resources", "media"]
+                    property list<string> centerLeft: ["resources", "codexUsage", "media"]
                     property list<string> center: ["workspaces"]
                     property list<string> centerRight: ["clock", "utilButtons", "battery"]
                     property list<string> right: ["rightSidebarButton", "tray", "timer", "shellUpdate", "spacer", "weather"]
@@ -1239,6 +1240,17 @@ Singleton {
                     property int swapWarningThreshold: 85
                     property int cpuWarningThreshold: 90
                     property int gpuWarningThreshold: 90
+                }
+                property JsonObject codexUsage: JsonObject {
+                    property bool enable: true
+                    property bool showFiveHour: true
+                    property bool showWeekly: true
+                    property bool showAccount: false
+                    property string authFile: "" // empty → ~/.codex/auth.json
+                    property string endpoint: "https://chatgpt.com/backend-api/wham/usage"
+                    property int requestDelaySeconds: 60
+                    property int cautionThreshold: 75
+                    property int warningThreshold: 90
                 }
                 property list<string> screenList: [] // List of names, like "eDP-1", find out with 'hyprctl monitors' command
                 property JsonObject utilButtons: JsonObject {
