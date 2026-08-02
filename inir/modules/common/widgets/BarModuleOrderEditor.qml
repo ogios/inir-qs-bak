@@ -33,20 +33,20 @@ ColumnLayout {
     // ─── Defaults / metadata ────────────────────────────────────────────
     readonly property var _defaultLayout: ({
         left: ["leftSidebarButton", "activeWindow"],
-        centerLeft: ["resources", "codexUsage", "media"],
+        centerLeft: ["resources", "codexUsage", "deepseekBalance", "media"],
         center: ["workspaces"],
         centerRight: ["clock", "utilButtons", "battery"],
         right: ["rightSidebarButton", "tray", "timer", "shellUpdate", "spacer", "weather"],
     })
     readonly property var _knownIds: [
-        "leftSidebarButton", "activeWindow", "taskbar", "resources", "codexUsage", "media", "workspaces",
+        "leftSidebarButton", "activeWindow", "taskbar", "resources", "codexUsage", "deepseekBalance", "media", "workspaces",
         "clock", "utilButtons", "battery", "rightSidebarButton", "tray", "timer", "shellUpdate", "spacer", "weather"
     ]
     readonly property var _zones: ["left", "centerLeft", "center", "centerRight", "right"]
     readonly property var _visKeys: ({
         leftSidebarButton: "leftSidebarButton", activeWindow: "activeWindow",
         taskbar: "taskbar",
-        resources: "resources", codexUsage: "codexUsage", media: "media", workspaces: "workspaces", clock: "clock",
+        resources: "resources", codexUsage: "codexUsage", deepseekBalance: "deepseekBalance", media: "media", workspaces: "workspaces", clock: "clock",
         utilButtons: "utilButtons", battery: "battery", rightSidebarButton: "rightSidebarButton",
         tray: "sysTray", weather: "weather",
     })
@@ -54,7 +54,7 @@ ColumnLayout {
     function _metaIcon(id) {
         return ({ leftSidebarButton: "side_navigation", activeWindow: "window",
             taskbar: "dock_to_bottom",
-            resources: "memory", codexUsage: "smart_toy", media: "music_note", workspaces: "workspaces", clock: "schedule",
+            resources: "memory", codexUsage: "smart_toy", deepseekBalance: "account_balance_wallet", media: "music_note", workspaces: "workspaces", clock: "schedule",
             utilButtons: "build", battery: "battery_full", rightSidebarButton: "call_to_action",
             tray: "shelf_auto_hide", timer: "timer", shellUpdate: "system_update", spacer: "space_bar",
             weather: "cloud" })[id] || "widgets"
@@ -62,7 +62,7 @@ ColumnLayout {
     function _metaLabel(id) {
         return ({ leftSidebarButton: Translation.tr("Left sidebar"), activeWindow: Translation.tr("Active window"),
             taskbar: Translation.tr("Taskbar"),
-            resources: Translation.tr("Resources"), codexUsage: Translation.tr("Codex usage"), media: Translation.tr("Media"),
+            resources: Translation.tr("Resources"), codexUsage: Translation.tr("Codex usage"), deepseekBalance: Translation.tr("DeepSeek balance"), media: Translation.tr("Media"),
             workspaces: Translation.tr("Workspaces"), clock: Translation.tr("Clock"), utilButtons: Translation.tr("Utility buttons"),
             battery: Translation.tr("Battery"), rightSidebarButton: Translation.tr("Right sidebar"), tray: Translation.tr("System tray"),
             timer: Translation.tr("Timer"), shellUpdate: Translation.tr("Shell update"), spacer: Translation.tr("Flexible spacer"),

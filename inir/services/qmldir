@@ -19,6 +19,7 @@ singleton CodexUsage 1.0 CodexUsage.qml
 singleton CustomWidgets 1.0 CustomWidgets.qml
 DankSocket 1.0 DankSocket.qml
 singleton DateTime 1.0 DateTime.qml
+singleton DeepSeekBalance 1.0 DeepSeekBalance.qml
 singleton Events 1.0 Events.qml
 singleton FirstRunExperience 1.0 FirstRunExperience.qml
 singleton FontSyncService 1.0 FontSyncService.qml

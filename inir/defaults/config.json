@@ -649,6 +649,7 @@
             "media": true,
             "resources": true,
             "codexUsage": true,
+            "deepseekBalance": true,
             "rightSidebarButton": true,
             "sysTray": true,
             "taskbar": false,
@@ -665,6 +666,7 @@
             "centerLeft": [
                 "resources",
                 "codexUsage",
+                "deepseekBalance",
                 "media"
             ],
             "center": [
@@ -714,6 +716,18 @@
             "requestDelaySeconds": 60,
             "cautionThreshold": 75,
             "warningThreshold": 90
+        },
+        "deepseekBalance": {
+            "enable": true,
+            "apiKey": "",
+            "apiKeyFile": "~/.deepseek/api_key",
+            "endpoint": "https://api.deepseek.com/user/balance",
+            "preferredCurrency": "CNY",
+            "requestDelaySeconds": 60,
+            "fetchTimeoutSeconds": 30,
+            "showSymbol": true,
+            "cautionBelow": 0,
+            "warningBelow": 5
         },
         "screenList": [],
         "showBackground": true,

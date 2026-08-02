@@ -769,6 +769,121 @@ ContentPage {
     }
 
     // ═══════════════════════════════════════════════════════════════════
+    // DEEPSEEK BALANCE
+    // ═══════════════════════════════════════════════════════════════════
+    SettingsCardSection {
+        visible: root.isIiActive && !(Config.options?.settingsUi?.easyMode ?? false)
+        expanded: false
+        icon: "account_balance_wallet"
+        title: Translation.tr("DeepSeek Balance")
+
+        SettingsGroup {
+            StyledText {
+                Layout.fillWidth: true
+                text: Translation.tr("Show your DeepSeek API balance on the bar. Requires a DeepSeek API key, read from the API key field, the key file, or the DEEPSEEK_API_KEY environment variable.")
+                color: Appearance.colors.colSubtext
+                font.pixelSize: Appearance.font.pixelSize.smaller
+            }
+
+            ConfigRow {
+                uniform: true
+                SettingsSwitch {
+                    buttonIcon: "visibility"
+                    text: Translation.tr("Enable DeepSeek balance")
+                    checked: Config.options?.bar?.deepseekBalance?.enable ?? true
+                    onCheckedChanged: Config.setNestedValue("bar.deepseekBalance.enable", checked)
+                }
+                SettingsSwitch {
+                    buttonIcon: "attach_money"
+                    text: Translation.tr("Show currency symbol")
+                    checked: Config.options?.bar?.deepseekBalance?.showSymbol ?? true
+                    onCheckedChanged: Config.setNestedValue("bar.deepseekBalance.showSymbol", checked)
+                }
+            }
+
+            ConfigRow {
+                uniform: true
+                ConfigSpinBox {
+                    icon: "warning"
+                    text: Translation.tr("Caution below")
+                    value: Config.options?.bar?.deepseekBalance?.cautionBelow ?? 0
+                    from: 0
+                    to: 100000
+                    stepSize: 5
+                    onValueChanged: Config.setNestedValue("bar.deepseekBalance.cautionBelow", value)
+                }
+                ConfigSpinBox {
+                    icon: "error"
+                    text: Translation.tr("Warning below")
+                    value: Config.options?.bar?.deepseekBalance?.warningBelow ?? 5
+                    from: 0
+                    to: 100000
+                    stepSize: 5
+                    onValueChanged: Config.setNestedValue("bar.deepseekBalance.warningBelow", value)
+                }
+            }
+
+            ConfigRow {
+                uniform: true
+                ConfigSpinBox {
+                    icon: "schedule"
+                    text: Translation.tr("Refresh delay (s)")
+                    value: Config.options?.bar?.deepseekBalance?.requestDelaySeconds ?? 60
+                    from: 30
+                    to: 86400
+                    stepSize: 30
+                    onValueChanged: Config.setNestedValue("bar.deepseekBalance.requestDelaySeconds", value)
+                }
+                Item { Layout.fillWidth: true }
+            }
+
+            SettingsDivider {}
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 4
+                StyledText {
+                    Layout.fillWidth: true
+                    text: Translation.tr("API key")
+                    color: Appearance.colors.colSubtext
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                }
+                MaterialTextField {
+                    Layout.fillWidth: true
+                    placeholderText: "sk-..."
+                    text: Config.options?.bar?.deepseekBalance?.apiKey ?? ""
+                    echoMode: TextInput.Password
+                    onTextChanged: Config.setNestedValue("bar.deepseekBalance.apiKey", text)
+                }
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 4
+                StyledText {
+                    Layout.fillWidth: true
+                    text: Translation.tr("API key file")
+                    color: Appearance.colors.colSubtext
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                }
+                MaterialTextField {
+                    Layout.fillWidth: true
+                    placeholderText: "~/.deepseek/api_key"
+                    text: Config.options?.bar?.deepseekBalance?.apiKeyFile ?? "~/.deepseek/api_key"
+                    onTextChanged: Config.setNestedValue("bar.deepseekBalance.apiKeyFile", text)
+                }
+                StyledText {
+                    Layout.fillWidth: true
+                    text: Translation.tr("Used when the API key field is empty. The DEEPSEEK_API_KEY environment variable is the final fallback.")
+                    color: Appearance.colors.colSubtext
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                    wrapMode: Text.WordWrap
+                }
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
     // RESOURCES
     // ═══════════════════════════════════════════════════════════════════
     SettingsCardSection {

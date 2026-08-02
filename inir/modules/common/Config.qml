@@ -1172,6 +1172,7 @@ Singleton {
                     property bool activeWindow: true
                     property bool resources: true
                     property bool codexUsage: true
+                    property bool deepseekBalance: true
                     property bool media: true
                     property bool workspaces: true
                     property bool clock: true
@@ -1208,11 +1209,11 @@ Singleton {
                 //   centerRight → right central pill group (scroll, triple-tap fx)
                 //   right       → right edge section (click=right sidebar)
                 // Known ids: leftSidebarButton, activeWindow, taskbar, resources,
-                //   codexUsage, media, workspaces, clock, utilButtons, battery, weather, tray,
+                //   codexUsage, deepseekBalance, media, workspaces, clock, utilButtons, battery, weather, tray,
                 //   rightSidebarButton.
                 property JsonObject layout: JsonObject {
                     property list<string> left: ["leftSidebarButton", "activeWindow"]
-                    property list<string> centerLeft: ["resources", "codexUsage", "media"]
+                    property list<string> centerLeft: ["resources", "codexUsage", "deepseekBalance", "media"]
                     property list<string> center: ["workspaces"]
                     property list<string> centerRight: ["clock", "utilButtons", "battery"]
                     property list<string> right: ["rightSidebarButton", "tray", "timer", "shellUpdate", "spacer", "weather"]
@@ -1251,6 +1252,18 @@ Singleton {
                     property int requestDelaySeconds: 60
                     property int cautionThreshold: 75
                     property int warningThreshold: 90
+                }
+                property JsonObject deepseekBalance: JsonObject {
+                    property bool enable: true
+                    property string apiKey: "" // empty → apiKeyFile / DEEPSEEK_API_KEY
+                    property string apiKeyFile: "~/.deepseek/api_key"
+                    property string endpoint: "https://api.deepseek.com/user/balance"
+                    property string preferredCurrency: "CNY"
+                    property int requestDelaySeconds: 60
+                    property int fetchTimeoutSeconds: 30
+                    property bool showSymbol: true
+                    property real cautionBelow: 0
+                    property real warningBelow: 5
                 }
                 property list<string> screenList: [] // List of names, like "eDP-1", find out with 'hyprctl monitors' command
                 property JsonObject utilButtons: JsonObject {
