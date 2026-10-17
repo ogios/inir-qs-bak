@@ -1172,6 +1172,7 @@ Singleton {
                     property bool activeWindow: true
                     property bool resources: true
                     property bool codexUsage: true
+                    property bool grokUsage: true
                     property bool deepseekBalance: true
                     property bool media: true
                     property bool workspaces: true
@@ -1209,11 +1210,11 @@ Singleton {
                 //   centerRight → right central pill group (scroll, triple-tap fx)
                 //   right       → right edge section (click=right sidebar)
                 // Known ids: leftSidebarButton, activeWindow, taskbar, resources,
-                //   codexUsage, deepseekBalance, media, workspaces, clock, utilButtons, battery, weather, tray,
+                //   codexUsage, grokUsage, deepseekBalance, media, workspaces, clock, utilButtons, battery, weather, tray,
                 //   rightSidebarButton.
                 property JsonObject layout: JsonObject {
                     property list<string> left: ["leftSidebarButton", "activeWindow"]
-                    property list<string> centerLeft: ["resources", "codexUsage", "deepseekBalance", "media"]
+                    property list<string> centerLeft: ["resources", "codexUsage", "grokUsage", "deepseekBalance", "media"]
                     property list<string> center: ["workspaces"]
                     property list<string> centerRight: ["clock", "utilButtons", "battery"]
                     property list<string> right: ["rightSidebarButton", "tray", "timer", "shellUpdate", "spacer", "weather"]
@@ -1249,6 +1250,14 @@ Singleton {
                     property bool showAccount: false
                     property string authFile: "" // empty → ~/.codex/auth.json
                     property string endpoint: "https://chatgpt.com/backend-api/wham/usage"
+                    property int requestDelaySeconds: 60
+                    property int cautionThreshold: 75
+                    property int warningThreshold: 90
+                }
+                property JsonObject grokUsage: JsonObject {
+                    property bool enable: true
+                    property string authFile: "" // empty → ~/.grok/auth.json
+                    property string endpoint: "https://grok.com/rest/grok/credits"
                     property int requestDelaySeconds: 60
                     property int cautionThreshold: 75
                     property int warningThreshold: 90

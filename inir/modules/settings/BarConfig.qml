@@ -769,6 +769,75 @@ ContentPage {
     }
 
     // ═══════════════════════════════════════════════════════════════════
+    // GROK USAGE
+    // ═══════════════════════════════════════════════════════════════════
+    SettingsCardSection {
+        visible: root.isIiActive && !(Config.options?.settingsUi?.easyMode ?? false)
+        expanded: false
+        icon: "token"
+        title: Translation.tr("Grok usage")
+
+        SettingsGroup {
+            StyledText {
+                Layout.fillWidth: true
+                text: Translation.tr("Show Grok weekly credit usage on the bar (same style as RAM/CPU). Requires ~/.grok/auth.json from `grok login` or Grok Build.")
+                color: Appearance.colors.colSubtext
+                font.pixelSize: Appearance.font.pixelSize.smaller
+                wrapMode: Text.WordWrap
+            }
+
+            ConfigRow {
+                uniform: true
+                SettingsSwitch {
+                    buttonIcon: "visibility"
+                    text: Translation.tr("Enable Grok usage")
+                    checked: Config.options?.bar?.grokUsage?.enable ?? true
+                    onCheckedChanged: Config.setNestedValue("bar.grokUsage.enable", checked)
+                }
+                Item { Layout.fillWidth: true }
+            }
+
+            SettingsDivider {}
+
+            ConfigRow {
+                uniform: true
+                ConfigSpinBox {
+                    icon: "warning"
+                    text: Translation.tr("Caution used (%)")
+                    value: Config.options?.bar?.grokUsage?.cautionThreshold ?? 75
+                    from: 1
+                    to: 100
+                    stepSize: 1
+                    onValueChanged: Config.setNestedValue("bar.grokUsage.cautionThreshold", value)
+                }
+                ConfigSpinBox {
+                    icon: "error"
+                    text: Translation.tr("Warning used (%)")
+                    value: Config.options?.bar?.grokUsage?.warningThreshold ?? 90
+                    from: 1
+                    to: 100
+                    stepSize: 1
+                    onValueChanged: Config.setNestedValue("bar.grokUsage.warningThreshold", value)
+                }
+            }
+
+            ConfigRow {
+                uniform: true
+                ConfigSpinBox {
+                    icon: "schedule"
+                    text: Translation.tr("Refresh delay (s)")
+                    value: Config.options?.bar?.grokUsage?.requestDelaySeconds ?? 60
+                    from: 5
+                    to: 3600
+                    stepSize: 5
+                    onValueChanged: Config.setNestedValue("bar.grokUsage.requestDelaySeconds", value)
+                }
+                Item { Layout.fillWidth: true }
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
     // DEEPSEEK BALANCE
     // ═══════════════════════════════════════════════════════════════════
     SettingsCardSection {

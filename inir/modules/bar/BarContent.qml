@@ -190,7 +190,7 @@ Item { // Bar content region
         return (root._layoutMigrated && a && a.length >= 0) ? a : fallback
     }
     readonly property var _leftIds:        root._zone("left",        ["leftSidebarButton", "activeWindow"])
-    readonly property var _centerLeftIds:  root._zone("centerLeft",  ["resources", "codexUsage", "deepseekBalance", "media"])
+    readonly property var _centerLeftIds:  root._zone("centerLeft",  ["resources", "codexUsage", "grokUsage", "deepseekBalance", "media"])
     readonly property var _centerIds:      root._zone("center",      ["workspaces"])
     readonly property var _centerRightIds: root._zone("centerRight", ["clock", "utilButtons", "battery"])
     readonly property var _rightIds:       root._zone("right",       ["rightSidebarButton", "tray", "timer", "shellUpdate", "spacer", "weather"])
@@ -206,6 +206,7 @@ Item { // Bar content region
         "activeWindow": activeWindowComponent,
         "resources": resourcesModuleComponent,
         "codexUsage": codexUsageModuleComponent,
+        "grokUsage": grokUsageModuleComponent,
         "deepseekBalance": deepseekBalanceModuleComponent,
         "media": mediaModuleComponent,
         "workspaces": workspacesModuleComponent,
@@ -261,6 +262,15 @@ Item { // Bar content region
         id: codexUsageModuleComponent
         CodexUsageIndicator {
             visible: root._moduleVisible("codexUsage")
+            Layout.alignment: Qt.AlignVCenter
+            useShortenedForm: root.useShortenedForm
+            alwaysShow: root.useShortenedForm === 2
+        }
+    }
+    Component {
+        id: grokUsageModuleComponent
+        GrokUsageIndicator {
+            visible: root._moduleVisible("grokUsage")
             Layout.alignment: Qt.AlignVCenter
             useShortenedForm: root.useShortenedForm
             alwaysShow: root.useShortenedForm === 2

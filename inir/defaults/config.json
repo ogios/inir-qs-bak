@@ -649,6 +649,7 @@
             "media": true,
             "resources": true,
             "codexUsage": true,
+            "grokUsage": true,
             "deepseekBalance": true,
             "rightSidebarButton": true,
             "sysTray": true,
@@ -666,6 +667,7 @@
             "centerLeft": [
                 "resources",
                 "codexUsage",
+                "grokUsage",
                 "deepseekBalance",
                 "media"
             ],
@@ -713,6 +715,14 @@
             "showAccount": false,
             "authFile": "",
             "endpoint": "https://chatgpt.com/backend-api/wham/usage",
+            "requestDelaySeconds": 60,
+            "cautionThreshold": 75,
+            "warningThreshold": 90
+        },
+        "grokUsage": {
+            "enable": true,
+            "authFile": "",
+            "endpoint": "https://grok.com/rest/grok/credits",
             "requestDelaySeconds": 60,
             "cautionThreshold": 75,
             "warningThreshold": 90
