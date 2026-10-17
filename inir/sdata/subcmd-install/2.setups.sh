@@ -242,7 +242,7 @@ default = gnome;gtk
 org.freedesktop.impl.portal.ScreenCast = gnome
 org.freedesktop.impl.portal.Screenshot = gnome
 org.freedesktop.impl.portal.Access = gtk
-org.freedesktop.impl.portal.FileChooser = gtk
+org.freedesktop.impl.portal.FileChooser = termfilechooser
 org.freedesktop.impl.portal.Notification = gtk
 PORTAL_EOF
   fi
