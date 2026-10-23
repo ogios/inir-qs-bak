@@ -1209,12 +1209,12 @@ Singleton {
                 //   center      → the centered pivot group (normally workspaces)
                 //   centerRight → right central pill group (scroll, triple-tap fx)
                 //   right       → right edge section (click=right sidebar)
-                // Known ids: leftSidebarButton, activeWindow, taskbar, resources,
+                // Known ids: leftSidebarButton, activeWindow, taskbar, resources, separator,
                 //   codexUsage, grokUsage, deepseekBalance, media, workspaces, clock, utilButtons, battery, weather, tray,
                 //   rightSidebarButton.
                 property JsonObject layout: JsonObject {
                     property list<string> left: ["leftSidebarButton", "activeWindow"]
-                    property list<string> centerLeft: ["resources", "codexUsage", "grokUsage", "deepseekBalance", "media"]
+                    property list<string> centerLeft: ["resources", "separator", "codexUsage", "grokUsage", "deepseekBalance", "media"]
                     property list<string> center: ["workspaces"]
                     property list<string> centerRight: ["clock", "utilButtons", "battery"]
                     property list<string> right: ["rightSidebarButton", "tray", "timer", "shellUpdate", "spacer", "weather"]

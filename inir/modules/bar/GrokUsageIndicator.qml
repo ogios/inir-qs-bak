@@ -30,6 +30,7 @@ MouseArea {
 
         Resource {
             iconName: "token"
+            customIcon: "grok-symbolic"
             percentage: GrokUsage.usedFraction
             shown: GrokUsage.hasUsage || GrokUsage.requesting || GrokUsage.error.length > 0
             warningThreshold: root.warningThreshold

@@ -190,7 +190,7 @@ Item { // Bar content region
         return (root._layoutMigrated && a && a.length >= 0) ? a : fallback
     }
     readonly property var _leftIds:        root._zone("left",        ["leftSidebarButton", "activeWindow"])
-    readonly property var _centerLeftIds:  root._zone("centerLeft",  ["resources", "codexUsage", "grokUsage", "deepseekBalance", "media"])
+    readonly property var _centerLeftIds:  root._zone("centerLeft",  ["resources", "separator", "codexUsage", "grokUsage", "deepseekBalance", "media"])
     readonly property var _centerIds:      root._zone("center",      ["workspaces"])
     readonly property var _centerRightIds: root._zone("centerRight", ["clock", "utilButtons", "battery"])
     readonly property var _rightIds:       root._zone("right",       ["rightSidebarButton", "tray", "timer", "shellUpdate", "spacer", "weather"])
@@ -219,6 +219,7 @@ Item { // Bar content region
         "shellUpdate": shellUpdateComponent,
         "weather": weatherComponent,
         "spacer": spacerComponent,
+        "separator": barModuleSeparatorComponent,
     })
     // Edge zones (left/right) are RowLayouts with real slack; the centre zones
     // are content-sized pills with none. `activeWindow` only fills where there
@@ -249,6 +250,10 @@ Item { // Bar content region
         return id === "spacer" || id === "tray" || id === "workspaces" || id === "activeWindow"
     }
 
+    Component {
+        id: barModuleSeparatorComponent
+        BarModuleSeparator {}
+    }
     Component {
         id: resourcesModuleComponent
         Resources {

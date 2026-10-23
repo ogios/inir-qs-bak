@@ -33,13 +33,13 @@ ColumnLayout {
     // ─── Defaults / metadata ────────────────────────────────────────────
     readonly property var _defaultLayout: ({
         left: ["leftSidebarButton", "activeWindow"],
-        centerLeft: ["resources", "codexUsage", "grokUsage", "deepseekBalance", "media"],
+        centerLeft: ["resources", "separator", "codexUsage", "grokUsage", "deepseekBalance", "media"],
         center: ["workspaces"],
         centerRight: ["clock", "utilButtons", "battery"],
         right: ["rightSidebarButton", "tray", "timer", "shellUpdate", "spacer", "weather"],
     })
     readonly property var _knownIds: [
-        "leftSidebarButton", "activeWindow", "taskbar", "resources", "codexUsage", "grokUsage", "deepseekBalance", "media", "workspaces",
+        "leftSidebarButton", "activeWindow", "taskbar", "resources", "separator", "codexUsage", "grokUsage", "deepseekBalance", "media", "workspaces",
         "clock", "utilButtons", "battery", "rightSidebarButton", "tray", "timer", "shellUpdate", "spacer", "weather"
     ]
     readonly property var _zones: ["left", "centerLeft", "center", "centerRight", "right"]
@@ -54,7 +54,7 @@ ColumnLayout {
     function _metaIcon(id) {
         return ({ leftSidebarButton: "side_navigation", activeWindow: "window",
             taskbar: "dock_to_bottom",
-            resources: "memory", codexUsage: "smart_toy", grokUsage: "token", deepseekBalance: "account_balance_wallet", media: "music_note", workspaces: "workspaces", clock: "schedule",
+            resources: "memory", separator: "vertical_split", codexUsage: "smart_toy", grokUsage: "token", deepseekBalance: "account_balance_wallet", media: "music_note", workspaces: "workspaces", clock: "schedule",
             utilButtons: "build", battery: "battery_full", rightSidebarButton: "call_to_action",
             tray: "shelf_auto_hide", timer: "timer", shellUpdate: "system_update", spacer: "space_bar",
             weather: "cloud" })[id] || "widgets"
@@ -62,7 +62,7 @@ ColumnLayout {
     function _metaLabel(id) {
         return ({ leftSidebarButton: Translation.tr("Left sidebar"), activeWindow: Translation.tr("Active window"),
             taskbar: Translation.tr("Taskbar"),
-            resources: Translation.tr("Resources"), codexUsage: Translation.tr("Codex usage"), grokUsage: Translation.tr("Grok usage"), deepseekBalance: Translation.tr("DeepSeek balance"), media: Translation.tr("Media"),
+            resources: Translation.tr("Resources"), separator: Translation.tr("Module separator"), codexUsage: Translation.tr("Codex usage"), grokUsage: Translation.tr("Grok usage"), deepseekBalance: Translation.tr("DeepSeek balance"), media: Translation.tr("Media"),
             workspaces: Translation.tr("Workspaces"), clock: Translation.tr("Clock"), utilButtons: Translation.tr("Utility buttons"),
             battery: Translation.tr("Battery"), rightSidebarButton: Translation.tr("Right sidebar"), tray: Translation.tr("System tray"),
             timer: Translation.tr("Timer"), shellUpdate: Translation.tr("Shell update"), spacer: Translation.tr("Flexible spacer"),
@@ -94,7 +94,7 @@ ColumnLayout {
         const placed = root._placed()
         // `spacer` is a reusable filler — always offered, can appear any number
         // of times in any zone.
-        return root._knownIds.filter(id => id === "spacer" || placed.indexOf(id) === -1)
+        return root._knownIds.filter(id => id === "spacer" || id === "separator" || placed.indexOf(id) === -1)
     }
     readonly property var availableIds: root._available()
 
@@ -115,7 +115,7 @@ ColumnLayout {
     function _addToZone(id, toZone, atIndex) {
         root._ensureMigrated()
         const dst = root._getZone(toZone).slice()
-        if (id !== "spacer" && dst.indexOf(id) !== -1) return
+        if (id !== "spacer" && id !== "separator" && dst.indexOf(id) !== -1) return
         const idx = (atIndex === undefined || atIndex < 0) ? dst.length : Math.max(0, Math.min(atIndex, dst.length))
         dst.splice(idx, 0, id)
         Config.setNestedValue("bar.layout." + toZone, dst)

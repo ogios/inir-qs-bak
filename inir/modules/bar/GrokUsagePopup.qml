@@ -40,11 +40,22 @@ StyledPopup {
     component HeaderItem: Row {
         id: headerItem
         property string icon: ""
+        property string customIcon: ""
         required property var label
         spacing: 5
 
+        CustomIcon {
+            anchors.verticalCenter: parent.verticalCenter
+            visible: headerItem.customIcon.length > 0
+            width: Appearance.font.pixelSize.large
+            height: Appearance.font.pixelSize.large
+            source: headerItem.customIcon
+            colorize: true
+            color: Appearance.colors.colOnSurfaceVariant
+        }
         MaterialSymbol {
             anchors.verticalCenter: parent.verticalCenter
+            visible: headerItem.customIcon.length === 0
             fill: 0
             font.weight: Font.Medium
             text: headerItem.icon
@@ -67,7 +78,7 @@ StyledPopup {
         spacing: 10
 
         HeaderItem {
-            icon: "token"
+            customIcon: "grok-symbolic"
             label: Translation.tr("Grok usage")
         }
 
